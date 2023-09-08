@@ -12,7 +12,7 @@ nushellコマンドのコードにはnu-plugin, nu-protocolが必要(Cargo.toml�
 nu-plugin = "0.84.0"
 ```
 の形でパッケージを用いるとbuildがうまくできない．(これはコードが悪いかもしれない)
-そこで，nushellのソースコード中で，cratesディレクトリ内にコピーし，Cargo.tomlにあるように，ソースコード中を指定するようにすると，buildできる．
+そこで，nushellのソースコード中で，cratesディレクトリ内にnu_plugin_nopenディレクトリをコピーし，コピーしたnu_plugin_nopenディレクトリ内で`cargo build`によりbuildすることで，ビルドできます．
 この際，バイナリは `nushell/target/debug` 内に生成される．
 また， `nushell/` 内のCargo.tomlの[workspace]に追記する必要がある．これも一緒にあげているので，参考にしてください．
 
