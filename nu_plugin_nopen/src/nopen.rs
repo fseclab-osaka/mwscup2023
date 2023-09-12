@@ -38,8 +38,11 @@ impl Nopen {
                     if let Some(obj) = item.as_object() {
                         json_datas.push(serde_json::Value::Object(obj.clone()));
                     } else {
-                        // error
-                        todo!();
+                        return Err(LabeledError {
+                            label: "Invalid JSON format".into(),
+                            msg: "Invalid JSON format".into(),
+                            span: Some(call.head),
+                        });
                     }
                 }
             }
@@ -47,8 +50,11 @@ impl Nopen {
                 json_datas.push(serde_json::Value::Object(obj));
             }
             _ => {
-                // error
-                todo!();
+                return Err(LabeledError {
+                    label: "Invalid JSON format".into(),
+                    msg: "Invalid JSON format".into(),
+                    span: Some(call.head),
+                });
             }
         }
 
@@ -67,7 +73,7 @@ impl Nopen {
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
                 let mut new_json_data: Map<String, serde_json::Value> = Map::new();
-                for i in 0..=(map_keys.len() - 1) {
+                for i in 0..map_keys.len() {
                     let key = map_keys.get(i).unwrap();
                     let value = map.get(key).unwrap();
 
