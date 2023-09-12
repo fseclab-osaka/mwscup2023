@@ -1,10 +1,9 @@
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
-use std::path::Path;
-use clap::{App, Arg};
+use std::{path::Path, fs};
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use serde_json::{json, to_value, Map};
-use std::fs;
+use sha256::digest;
 
 pub struct Nopen;
 
@@ -42,6 +41,27 @@ impl Nopen {
             .items(&map_keys)
             .interact()
             .unwrap();
+
+        let mut new_json_data = Map::new();
+        if let serde_json::Value::Object(ref map) = json_data {
+            for i in 0..=(map_keys.len() - 1) {
+                let key = map_keys.get(i).unwrap();
+                let value = map.get(key).unwrap();
+
+                if selections.contains(&i) {
+                    new_json_data.insert(
+                        key.clone(),
+                        to_value(digest(value.clone().to_string())).unwrap(),
+                        );
+                } else {
+                    new_json_data.insert(key.clone(), value.clone());
+                }
+            }
+        }
+
+        let output_data = json!(new_json_data);
+        let output_data = serde_json::to_string(&output_data).expect("Failed to serialize to JSON");
+        fs::write("output.json", output_data).expect("Unable to write to file");
 
         Ok(nu_protocol::Value::Nothing { internal_span: call.head })
     }
