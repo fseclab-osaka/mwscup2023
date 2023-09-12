@@ -1,6 +1,10 @@
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
 use std::path::Path;
+use clap::{App, Arg};
+use dialoguer::{theme::ColorfulTheme, MultiSelect};
+use serde_json::{json, to_value, Map};
+use std::fs;
 
 pub struct Nopen;
 
@@ -24,6 +28,21 @@ impl Nopen {
         }
 
         eprintln!("Open file: {}", path.display());
+
+        let data = fs::read_to_string(path).expect("Unable to read file");
+        let json_data: serde_json::Value = serde_json::from_str(&data).expect("Invalid JSON format");
+
+        let mut map_keys: Vec<String> = Vec::new();
+        if let serde_json::Value::Object(ref map) = json_data {
+            map_keys = map.keys().cloned().collect();
+        }
+
+        let selections = MultiSelect::with_theme(&ColorfulTheme::default())
+            .with_prompt("Select the columns you want to sha256 hash")
+            .items(&map_keys)
+            .interact()
+            .unwrap();
+
         Ok(nu_protocol::Value::Nothing { internal_span: call.head })
     }
 }
