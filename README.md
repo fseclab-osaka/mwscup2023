@@ -6,15 +6,7 @@ register (バイナリのファイル)
 ただし，バイナリのファイル名は `nu_plugin_` の形である必要がある．
 
 ## 本コードのbuildについて
-nushellコマンドのコードにはnu-plugin, nu-protocolが必要(Cargo.tomlを参照)です．
-これを
-```
-nu-plugin = "0.84.0"
-```
-の形でパッケージを用いるとbuildがうまくできない．(これはコードが悪いかもしれない)
-そこで，nushellのソースコード中で，cratesディレクトリ内にnu_plugin_nopenディレクトリをコピーし，コピーしたnu_plugin_nopenディレクトリ内で`cargo build`によりbuildすることで，ビルドできます．
-この際，バイナリは `nushell/target/debug` 内に生成される．
-また， `nushell/` 内のCargo.tomlの[workspace]に追記する必要がある．これも一緒にあげているので，参考にしてください．
+nushellのコード等は必要なく，本ディレクトリで`cargo build`を実行可能
 
 ## 注意
 該当バイナリについては，自分のローカル環境での動作は確認しています．

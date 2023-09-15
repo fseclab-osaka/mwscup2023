@@ -100,7 +100,7 @@ impl Nopen {
         };
         fs::write("output.json", output_data).expect("Unable to write to file");
 
-        Ok(nu_protocol::Value::Nothing { internal_span: call.head })
+        Ok(Value::nothing(call.head))
     }
 }
         

@@ -13,10 +13,10 @@ bench = false
 bench = false
 
 [dependencies]
-nu-plugin = { path = "../nu-plugin", version = "0.84.1" }
-nu-protocol = { path="../nu-protocol", version = "0.84.1", features = ["plugin"] }
-# nu-plugin = "0.84.0"
-# nu-protocol = "0.84.0"
+# nu-plugin = { path = "../nu-plugin", version = "0.84.1" }
+# nu-protocol = { path="../nu-protocol", version = "0.84.1", features = ["plugin"] }
+nu-plugin = "0.84.0"
+nu-protocol = "0.84.0"
 clap = "2.33.3"
 serde = "1.0.130"
 serde_json = { version = "1.0.67", features = ["preserve_order"] }
