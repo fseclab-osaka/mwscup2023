@@ -11,6 +11,10 @@ impl Nopen {
     pub fn nopen(&self, call: &EvaluatedCall, input: &Value) -> Result<Value, LabeledError> {
         // 引数の文字列を取得する
         let path: String = call.req(0)?;
+        let output = call.get_flag("output")?;
+
+        // output for debug
+        eprintln!("output: {:?}", output);
         eprintln!("path: {}", path);
 
         // pathのファイルが存在するかどうかを確認する
@@ -113,7 +117,14 @@ impl Nopen {
                 serde_json::to_string_pretty(&new_json_datas).expect("Failed to serialize to JSON")
             }
         };
-        fs::write("output.json", output_data).expect("Unable to write to file");
+        let output_name = {
+            if let Some(output) = output {
+                output
+            } else {
+                "output.json".to_string()
+            }
+        };
+        fs::write(output_name, output_data).expect("Unable to write to file");
 
         Ok(Value::nothing(call.head))
     }

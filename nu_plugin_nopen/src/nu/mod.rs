@@ -6,8 +6,9 @@ impl Plugin for Nopen {
     fn signature(&self) -> Vec<PluginSignature> {
         vec![
             PluginSignature::build("nopen")
-                .usage("nopen [json file]")
-                .required("file", SyntaxShape::String, "the file to open"),
+                .usage("nopen (-o [output file name]) [json file]")
+                .required("file", SyntaxShape::String, "the file to open")
+                .named("output", SyntaxShape::String, "the name file", Some('o') ),
         ]
     }
 
