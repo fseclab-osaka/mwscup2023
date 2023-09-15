@@ -59,8 +59,14 @@ impl Nopen {
         }
 
         let mut map_keys: Vec<String> = Vec::new();
-        if let serde_json::Value::Object(ref map) = json_datas[0] {
-            map_keys = map.keys().cloned().collect();
+        for json_data in json_datas.iter() {
+            if let serde_json::Value::Object(ref map) = json_data {
+                for key in map.keys() {
+                    if !map_keys.contains(key) {
+                        map_keys.push(key.clone());
+                    }
+                }
+            }
         }
 
         let selections = MultiSelect::with_theme(&ColorfulTheme::default())
@@ -68,16 +74,25 @@ impl Nopen {
             .items(&map_keys)
             .interact()
             .unwrap();
-
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
                 let mut new_json_data: Map<String, serde_json::Value> = Map::new();
-                for i in 0..map_keys.len() {
-                    let key = map_keys.get(i).unwrap();
+                for i in 0..map.len() {
+                    let key = map.keys().nth(i).unwrap();
                     let value = map.get(key).unwrap();
 
-                    if selections.contains(&i) {
+                    // map_keysにおけるインデックスを求める
+                    let mut index = 0;
+                    for j in 0..map_keys.len() {
+                        if map_keys.get(j).unwrap() == key {
+                            index = j;
+                            break;
+                        }
+                    }
+                    let key = map_keys.get(index).unwrap();
+
+                    if selections.contains(&index) {
                         new_json_data.insert(
                             key.clone(),
                             to_value(digest(value.clone().to_string())).unwrap(),
