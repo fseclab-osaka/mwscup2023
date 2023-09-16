@@ -78,6 +78,7 @@ impl Nopen {
             .items(&map_keys)
             .interact()
             .unwrap();
+
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
@@ -99,6 +100,7 @@ impl Nopen {
                     if selections.contains(&index) {
                         new_json_data.insert(
                             key.clone(),
+                            // saltを追加する
                             to_value(digest(value.clone().to_string())).unwrap(),
                             );
                     } else {
