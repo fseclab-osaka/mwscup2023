@@ -22,3 +22,4 @@ serde = "1.0.130"
 serde_json = { version = "1.0.67", features = ["preserve_order"] }
 dialoguer = "0.9.0"
 sha256 = "1.4.0"
+rand = "0.8.5"

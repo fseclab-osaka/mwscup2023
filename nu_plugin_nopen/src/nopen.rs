@@ -1,9 +1,10 @@
+use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
-use std::{path::Path, fs};
-use dialoguer::{theme::ColorfulTheme, MultiSelect};
+use rand::Rng;
 use serde_json::{to_value, Map};
 use sha256::digest;
+use std::{fs, path::Path};
 
 pub struct Nopen;
 
@@ -33,7 +34,8 @@ impl Nopen {
         eprintln!("Open file: {}", path.display());
 
         let data = fs::read_to_string(path).expect("Unable to read file");
-        let json_value: serde_json::Value = serde_json::from_str(&data).expect("Invalid JSON format");
+        let json_value: serde_json::Value =
+            serde_json::from_str(&data).expect("Invalid JSON format");
         let mut json_datas: Vec<serde_json::Value> = Vec::new();
 
         match json_value {
@@ -80,6 +82,10 @@ impl Nopen {
             .unwrap();
 
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
+
+        let salt: String = Self::gen_salt();
+        eprintln!("salt: {}", salt);
+
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
                 let mut new_json_data: Map<String, serde_json::Value> = Map::new();
@@ -100,9 +106,8 @@ impl Nopen {
                     if selections.contains(&index) {
                         new_json_data.insert(
                             key.clone(),
-                            // saltを追加する
-                            to_value(digest(value.clone().to_string())).unwrap(),
-                            );
+                            to_value(digest(value.clone().to_string() + &salt)).unwrap(),
+                        );
                     } else {
                         new_json_data.insert(key.clone(), value.clone());
                     }
@@ -114,7 +119,8 @@ impl Nopen {
         // 要素が1つの場合にも配列にならないようにする
         let output_data = {
             if new_json_datas.len() == 1 {
-                serde_json::to_string_pretty(&new_json_datas[0]).expect("Failed to serialize to JSON")
+                serde_json::to_string_pretty(&new_json_datas[0])
+                    .expect("Failed to serialize to JSON")
             } else {
                 serde_json::to_string_pretty(&new_json_datas).expect("Failed to serialize to JSON")
             }
@@ -130,6 +136,19 @@ impl Nopen {
 
         Ok(Value::nothing(call.head))
     }
-}
-        
 
+    // gen_salt: 16 文字の乱数を生成する
+    fn gen_salt() -> String {
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                            abcdefghijklmnopqrstuvwxyz\
+                            0123456789)(*&^%$#@!~";
+        let mut rng = rand::thread_rng();
+
+        (0..16)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
+            })
+            .collect()
+    }
+}
