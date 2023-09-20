@@ -204,7 +204,7 @@ impl Zk4log {
         }
 
         let open_json_columns = open_json_columns.join(" ");
-        let command_str = format!("open {} | select {}", path.display(), open_json_columns);
+        let command_str = format!("open {} | select -i {}", path.display(), open_json_columns);
         eprintln!("{}", command_str);
         let output = Command::new("nu")
             .arg("-c")
