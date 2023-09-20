@@ -4,7 +4,7 @@ use nu_protocol::Value;
 use rand::Rng;
 use serde_json::{to_value, Map};
 use sha256::digest;
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::Command};
 
 pub struct Zk4log;
 
@@ -134,6 +134,86 @@ impl Zk4log {
         fs::write(output_name, output_data).expect("Unable to write to file");
 
         Ok(Value::nothing(call.head))
+    }
+
+    pub fn open(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
+        let path: String = call.req(0)?;
+
+        // pathのファイルが存在するかどうかを確認する
+        let path = Path::new(&path);
+        if !path.exists() {
+            eprintln!("File not found: {}", path.display());
+            return Err(LabeledError {
+                label: "File not found".into(),
+                msg: "File not found".into(),
+                span: Some(call.head),
+            });
+        }
+
+        let data = fs::read_to_string(path).expect("Unable to read file");
+        let json_value: serde_json::Value =
+            serde_json::from_str(&data).expect("Invalid JSON format");
+        let mut json_datas: Vec<serde_json::Value> = Vec::new();
+
+        match json_value {
+            serde_json::Value::Array(array_val) => {
+                for item in array_val.iter() {
+                    if let Some(obj) = item.as_object() {
+                        json_datas.push(serde_json::Value::Object(obj.clone()));
+                    } else {
+                        return Err(LabeledError {
+                            label: "Invalid JSON format".into(),
+                            msg: "Invalid JSON format".into(),
+                            span: Some(call.head),
+                        });
+                    }
+                }
+            }
+            serde_json::Value::Object(obj) => {
+                json_datas.push(serde_json::Value::Object(obj));
+            }
+            _ => {
+                return Err(LabeledError {
+                    label: "Invalid JSON format".into(),
+                    msg: "Invalid JSON format".into(),
+                    span: Some(call.head),
+                });
+            }
+        }
+
+        let mut map_keys: Vec<String> = Vec::new();
+        for json_data in json_datas.iter() {
+            if let serde_json::Value::Object(ref map) = json_data {
+                for key in map.keys() {
+                    if !map_keys.contains(key) {
+                        map_keys.push(key.clone());
+                    }
+                }
+            }
+        }
+
+        let selections = MultiSelect::with_theme(&ColorfulTheme::default())
+            .with_prompt("Select the columns you want to open")
+            .items(&map_keys)
+            .interact()
+            .unwrap();
+
+        let mut open_json_columns: Vec<String> = Vec::new();
+        for selection in selections {
+            open_json_columns.push(map_keys.get(selection).unwrap().clone());
+        }
+
+        let open_json_columns = open_json_columns.join(" ");
+        let command_str = format!("open {} | select {}", path.display(), open_json_columns);
+        eprintln!("{}", command_str);
+        let output = Command::new("nu")
+            .arg("-c")
+            .arg(command_str)
+            .output()
+            .expect("Failed to execute command");
+        eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+
+        return Ok(Value::nothing(call.head));
     }
 
     // gen_salt: 16 文字の乱数を生成する

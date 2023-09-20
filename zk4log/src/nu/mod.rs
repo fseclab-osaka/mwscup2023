@@ -29,7 +29,7 @@ impl Plugin for Zk4log {
         match name {
             "zk4log hide" => self.hide(call, input),
             "zk4log verify" => todo!(),
-            "zk4log open" => todo!(),
+            "zk4log open" => self.open(call, input),
             "zk4log" => self.zk4log(call, input),
             _ => Err(LabeledError {
                 label: "Plugin call with wrong name".into(),
