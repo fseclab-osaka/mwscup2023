@@ -150,4 +150,12 @@ impl Zk4log {
             })
             .collect()
     }
+
+    pub fn zk4log(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
+        Err(LabeledError {
+            label: "subcommand in [\"hide\", \"verify\", \"open\"]".into(),
+            msg: "zk4log <subcommand>".into(),
+            span: Some(call.head),
+        })
+    }
 }
