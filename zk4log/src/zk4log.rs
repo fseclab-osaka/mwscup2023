@@ -1,10 +1,11 @@
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
+use nu_path::expand_tilde;
 use rand::Rng;
 use serde_json::{to_value, Map};
 use sha256::digest;
-use std::{fs, path::Path, process::Command};
+use std::{fs, process::Command};
 
 pub struct Zk4log;
 
@@ -19,7 +20,7 @@ impl Zk4log {
         eprintln!("path: {}", path);
 
         // pathのファイルが存在するかどうかを確認する
-        let path = Path::new(&path);
+        let path = expand_tilde(path);
         if !path.exists() {
             eprintln!("test");
             eprintln!("File not found: {}", path.display());
@@ -140,7 +141,8 @@ impl Zk4log {
         let path: String = call.req(0)?;
 
         // pathのファイルが存在するかどうかを確認する
-        let path = Path::new(&path);
+        let path = expand_tilde(path);
+        let path = path.as_path();
         if !path.exists() {
             eprintln!("File not found: {}", path.display());
             return Err(LabeledError {
