@@ -1,9 +1,11 @@
+use crate::zk::{self, prove, verify};
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
+use nu_path::expand_tilde;
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
-use nu_path::expand_tilde;
 use rand::Rng;
 use serde_json::{to_value, Map};
+use sha2::{Digest, Sha256};
 use sha256::digest;
 use std::{fs, process::Command};
 
@@ -85,6 +87,7 @@ impl Zk4log {
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
 
         let salt: String = Self::gen_salt();
+        let (params, pvk) = zk::setup();
 
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
@@ -104,10 +107,21 @@ impl Zk4log {
                     let key = map_keys.get(index).unwrap();
 
                     if selections.contains(&index) {
-                        new_json_data.insert(
-                            key.clone(),
-                            to_value(digest(value.clone().to_string() + &salt)).unwrap(),
-                        );
+                        let preimage_str = value.clone().to_string() + &salt;
+                        let mut preimage_bytes: [u8; 80] = [0; 80];
+                        preimage_bytes[..preimage_str.len()]
+                            .copy_from_slice(preimage_str.as_bytes());
+
+                        let hash_bytes = Sha256::digest(&Sha256::digest(&preimage_bytes));
+                        let hash_str = hash_bytes
+                            .iter()
+                            .map(|b| format!("{:02x}", b))
+                            .collect::<Vec<String>>()
+                            .join("");
+
+                        new_json_data.insert(key.clone(), to_value(hash_str).unwrap());
+                        let proof = prove(params.clone(), preimage_str);
+                        verify(&pvk, &hash_bytes, &proof);
                     } else {
                         new_json_data.insert(key.clone(), value.clone());
                     }
