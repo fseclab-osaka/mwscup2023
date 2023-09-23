@@ -117,9 +117,11 @@ pub fn verify(pvk: &PreparedVerifyingKey<Bls12>, hash: &[u8], proof: &Proof<Bls1
     }
 }
 
+// `cargo test -- --nocapture` でテスト内の println! を画面に出力
 #[cfg(test)]
 mod test {
     use super::*;
+    use sha2::{Digest, Sha256};
     #[test]
     fn test_prove() {
         let m = String::from("2rL9AkP0zS6E8yYXg7lUvB1tjHn4JwQcOqT5IeWxN3MmKpFfDdVbGhZaC");

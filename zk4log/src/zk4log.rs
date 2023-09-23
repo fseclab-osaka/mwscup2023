@@ -87,8 +87,11 @@ impl Zk4log {
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
 
         let salt: String = Self::gen_salt();
+
+        // パラメタと検証鍵を生成
         let (params, pvk) = zk::setup();
 
+        // ログを秘匿化しつつ ZKP を生成する
         for json_data in json_datas {
             if let serde_json::Value::Object(ref map) = json_data {
                 let mut new_json_data: Map<String, serde_json::Value> = Map::new();
@@ -107,11 +110,15 @@ impl Zk4log {
                     let key = map_keys.get(index).unwrap();
 
                     if selections.contains(&index) {
+                        // ハッシュ化のために、入力ログデータを 
+                        // (Stringではなく) 固定長のu8 配列で表現する
                         let preimage_str = value.clone().to_string() + &salt;
                         let mut preimage_bytes: [u8; 80] = [0; 80];
                         preimage_bytes[..preimage_str.len()]
                             .copy_from_slice(preimage_str.as_bytes());
 
+                        // u8 配列であるハッシュ値を、
+                        // ファイル書き出し用に16進数文字列に変換
                         let hash_bytes = Sha256::digest(&Sha256::digest(&preimage_bytes));
                         let hash_str = hash_bytes
                             .iter()
@@ -120,6 +127,8 @@ impl Zk4log {
                             .join("");
 
                         new_json_data.insert(key.clone(), to_value(hash_str).unwrap());
+
+                        // TODO: write() を使って out.proof への書き込む
                         let proof = prove(params.clone(), preimage_str);
                         verify(&pvk, &hash_bytes, &proof);
                     } else {
