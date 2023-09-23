@@ -11,8 +11,6 @@ use bls12_381::Bls12;
 use ff::PrimeField;
 use pairing::Engine;
 use rand::rngs::OsRng;
-use sha2::{Digest, Sha256};
-use std::io::{self, Write};
 
 /// Our own SHA-256d gadget. Input and output are in little-endian bit order.
 fn sha256d<Scalar: PrimeField, CS: ConstraintSystem<Scalar>>(
@@ -80,7 +78,6 @@ impl<Scalar: PrimeField> Circuit<Scalar> for MyCircuit {
     }
 }
 
-// setup:
 pub fn setup() -> (Parameters<Bls12>, PreparedVerifyingKey<Bls12>) {
     let params = {
         let c = MyCircuit { preimage: None };
