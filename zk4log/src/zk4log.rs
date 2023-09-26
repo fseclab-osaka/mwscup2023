@@ -1,13 +1,20 @@
 use crate::zk::{self, prove, verify};
+use bellman::groth16::{self, PreparedVerifyingKey, Proof, VerifyingKey};
+use bls12_381::Bls12;
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
+use hex;
 use nu_path::expand_tilde;
 use nu_plugin::{EvaluatedCall, LabeledError};
 use nu_protocol::Value;
 use rand::Rng;
-use serde_json::{to_value, Map};
+use serde_json::{from_str, to_value, Map};
 use sha2::{Digest, Sha256};
 use sha256::digest;
-use std::{fs, process::Command};
+use std::{
+    fs,
+    io::{self, Read, Write},
+    process::Command,
+};
 
 pub struct Zk4log;
 
@@ -16,7 +23,6 @@ impl Zk4log {
         // 引数の文字列を取得する
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
-
 
         // pathのファイルが存在するかどうかを確認する
         Self::check_file_exists(&path, call)?;
@@ -114,9 +120,22 @@ impl Zk4log {
 
                         new_json_data.insert(key.clone(), to_value(hash_str).unwrap());
 
-                        // TODO: write() を使って out.proof への書き込む
                         let proof = prove(params.clone(), preimage_str);
-                        verify(&pvk, &hash_bytes, &proof);
+                        let mut file = fs::OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open("out.proof")
+                            .unwrap();
+
+                        fs::write("out.proof", "").unwrap(); // clear
+                        let data = format!("{}::{}::", i, key);
+                        file.write_all(data.as_bytes()).unwrap();
+                        proof.write(&mut file).unwrap();
+                        file.write_all("::".as_bytes()).unwrap();
+
+                        let file = fs::File::create("key.pub").unwrap();
+                        let vk: VerifyingKey<Bls12> = params.vk.clone();
+                        vk.write(file).unwrap();
                     } else {
                         new_json_data.insert(key.clone(), value.clone());
                     }
@@ -214,6 +233,67 @@ impl Zk4log {
             .output()
             .expect("Failed to execute command");
         eprintln!("{}", String::from_utf8_lossy(&output.stdout));
+
+        return Ok(Value::nothing(call.head));
+    }
+
+    pub fn verify(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
+        // log, proof, key があるかを確認
+        let log: String = call.get_flag_value("json").unwrap().as_string().unwrap();
+        Self::check_file_exists(&log, call)?;
+        let proof: String = call.get_flag_value("proof").unwrap().as_string().unwrap();
+        Self::check_file_exists(&proof, call)?;
+        let key: String = call.get_flag_value("key").unwrap().as_string().unwrap();
+        Self::check_file_exists(&key, call)?;
+        
+        // log をロード
+        let log = fs::read_to_string(&log).unwrap();
+        let log_json: serde_json::Value = from_str(&log).unwrap();
+
+        // proof をロード
+        let mut proof_buf = Vec::new();
+        let mut file_reader = io::BufReader::new(fs::File::open(&proof).unwrap());
+        file_reader.read_to_end(&mut proof_buf).unwrap();
+
+        // key をロード
+        let pvk: PreparedVerifyingKey<Bls12> = groth16::prepare_verifying_key(
+            &VerifyingKey::read(io::BufReader::new(fs::File::open(&key).unwrap())).unwrap(),
+        );
+
+        // proof は `<json_record_no>::<json_key>::<proof_data>` という形式。
+        // proof のパースには `split("::")` ではなく ascii 版の[58, 58] を使う。
+        // <proof_data> が String ではないことにより、u8 配列として proof を
+        // 扱うためである。
+
+        let delimiter: [u8; 2] = [58, 58]; // "::" のバイト表現
+
+        let mut start = 0;
+        let mut buf = Vec::new();
+        for (i, byte) in proof_buf.iter().enumerate() {
+            if byte == &delimiter[0] && i + 1 < proof_buf.len() && proof_buf[i + 1] == delimiter[1]
+            {
+                // delimiter を見つけた場合、区切り位置までの部分を処理
+                let chunk = &proof_buf[start..i];
+
+                // バイト配列から文字列への変換
+                buf.push(chunk);
+
+                // 次の区切り位置の開始位置を更新
+                start = i + 2; // delimiter の長さ分進める
+            }
+        }
+
+        // 最後の区切り位置から終端までの部分を処理
+        let chunk = &proof_buf[start..];
+        buf.push(chunk);
+
+        let i: usize = std::str::from_utf8(buf[0]).unwrap().parse().unwrap();
+        let k = std::str::from_utf8(buf[1]).unwrap().trim_matches('"');
+        let proof: Proof<Bls12> = Proof::read(io::Cursor::new(buf[2])).unwrap();
+        let hash = log_json[i][k].as_str().unwrap().trim_matches('"');
+        let hash = &hex::decode(hash).unwrap();
+
+        zk::verify(&pvk, &hash, &proof);
 
         return Ok(Value::nothing(call.head));
     }
