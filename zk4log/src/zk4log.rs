@@ -17,14 +17,9 @@ impl Zk4log {
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
 
-        // output for debug
-        eprintln!("output: {:?}", output);
-        eprintln!("path: {}", path);
-
         // pathのファイルが存在するかどうかを確認する
         let path = expand_tilde(path);
         if !path.exists() {
-            eprintln!("test");
             eprintln!("File not found: {}", path.display());
 
             return Err(LabeledError {
@@ -33,8 +28,6 @@ impl Zk4log {
                 span: Some(call.head),
             });
         }
-
-        eprintln!("Open file: {}", path.display());
 
         let data = fs::read_to_string(path).expect("Unable to read file");
         let json_value: serde_json::Value =
@@ -230,7 +223,6 @@ impl Zk4log {
 
         let open_json_columns = open_json_columns.join(" ");
         let command_str = format!("open {} | select -i {}", path.display(), open_json_columns);
-        eprintln!("{}", command_str);
         let output = Command::new("nu")
             .arg("-c")
             .arg(command_str)
