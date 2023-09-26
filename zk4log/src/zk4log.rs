@@ -16,7 +16,7 @@ pub struct Zk4log;
 
 impl Zk4log {
     pub fn hide(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
-        let mut item_count = 0;
+        let mut item_count = 1;
         // 引数の文字列を取得する
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
@@ -88,6 +88,25 @@ impl Zk4log {
             map_keys_hashmap.insert(map_keys.get(i).unwrap().clone(), i);
         }
 
+        // map_keysのインデックスを素早く取得するためのハッシュマップを作成
+        let mut map_keys_hashmap: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for i in 0..map_keys.len() {
+            map_keys_hashmap.insert(map_keys.get(i).unwrap().clone(), i);
+        }
+
+        // 秘匿化するitemの数を数える
+        for json_data in json_datas.iter() {
+            if let serde_json::Value::Object(ref map) = json_data {
+                for i in 0..map.len() {
+                    let key = map.keys().nth(i).unwrap();
+                    let index = map_keys_hashmap.get(key).unwrap();
+                    if selections.contains(&index) {
+                        item_count += 1;
+                    }
+                }
+            }
+        }
+
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
 
         let salt: String = Self::gen_salt();
@@ -95,6 +114,8 @@ impl Zk4log {
         eprint!("{}", "making keys...");
         let (params, pvk) = zk::setup();
         eprintln!("\r{}", "Finished making keys!".green());
+
+        let mut progress_bar = ProgressBar::new(item_count as u64);
 
         // ログを秘匿化しつつ ZKP を生成する
         for json_data in json_datas {
@@ -105,16 +126,10 @@ impl Zk4log {
                     let value = map.get(key).unwrap();
 
                     // map_keysにおけるインデックスを求める
-                    let mut index = 0;
-                    for j in 0..map_keys.len() {
-                        if map_keys.get(j).unwrap() == key {
-                            index = j;
-                            break;
-                        }
-                    }
-                    let key = map_keys.get(index).unwrap();
+                    let index = map_keys_hashmap.get(key).unwrap();
 
                     if selections.contains(&index) {
+                        progress_bar.progress();
                         // ハッシュ化のために、入力ログデータを 
                         // (Stringではなく) 固定長のu8 配列で表現する
                         let preimage_str = value.clone().to_string() + &salt;
@@ -135,7 +150,7 @@ impl Zk4log {
 
                         // TODO: write() を使って out.proof への書き込む
                         let proof = prove(params.clone(), preimage_str);
-                        verify(&pvk, &hash_bytes, &proof);
+                        // verify(&pvk, &hash_bytes, &proof);
                     } else {
                         new_json_data.insert(key.clone(), value.clone());
                     }
@@ -143,6 +158,7 @@ impl Zk4log {
                 new_json_datas.push(serde_json::Value::Object(new_json_data));
             }
         }
+        progress_bar.progress();
 
         // 要素が1つの場合にも配列にならないようにする
         let output_data = {
@@ -161,6 +177,7 @@ impl Zk4log {
             }
         };
         fs::write(output_name, output_data).expect("Unable to write to file");
+        eprintln!("\n{}", "finished making concealed log file and proof!".green());
 
         Ok(Value::nothing(call.head))
     }

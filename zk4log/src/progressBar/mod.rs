@@ -17,22 +17,21 @@ impl ProgressBar {
         self.current_step += 1;
         let percentage = self.current_step as f64 / self.total_steps as f64 * 100.0;
 
-        print!("\rProgress: [");
+        eprint!("\rProgress: [");
 
         let completed_steps = (percentage as u64 / 10) as usize;
         for _ in 0..completed_steps {
-            print!("#");
+            eprint!("#");
         }
 
         for _ in completed_steps..10 {
-            print!(" ");
+            eprint!(" ");
         }
 
-        print!("] {:.1}%", percentage);
-        io::stdout().flush().unwrap();
+        eprint!("] {:.1}%", percentage);
     }
 
     pub fn finish(&self) {
-        println!("\nDone!");
+        eprintln!("\nDone!");
     }
 }
