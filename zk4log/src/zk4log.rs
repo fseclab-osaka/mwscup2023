@@ -8,6 +8,7 @@ use serde_json::{to_value, Map};
 use sha2::{Digest, Sha256};
 use sha256::digest;
 use std::{fs, process::Command};
+use std::io::{self, Write};
 
 pub struct Zk4log;
 
@@ -81,8 +82,14 @@ impl Zk4log {
 
         let salt: String = Self::gen_salt();
 
+        // 鍵生成中というメッセージを表示
+        print!("{}", "Generating keys... ");
+        io::stdout().flush().unwrap();
         // パラメタと検証鍵を生成
         let (params, pvk) = zk::setup();
+        // 生成中メッセージを消去して、終了メッセージを表示
+        print!("\r{}", " ".repeat("Generating keys... ".len()));
+        println!("\r{}", "Made keys!");
 
         // ログを秘匿化しつつ ZKP を生成する
         for json_data in json_datas {
