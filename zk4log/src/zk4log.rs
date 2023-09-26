@@ -1,4 +1,5 @@
 use crate::zk::{self, prove, verify};
+use crate::progressBar::ProgressBar;
 use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use nu_path::expand_tilde;
@@ -15,6 +16,7 @@ pub struct Zk4log;
 
 impl Zk4log {
     pub fn hide(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
+        let mut item_count = 0;
         // 引数の文字列を取得する
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
@@ -78,6 +80,13 @@ impl Zk4log {
             .items(&map_keys)
             .interact()
             .unwrap();
+
+        // map_keysのインデックスを素早く取得するためのハッシュマップを作成
+        let mut map_keys_hashmap: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
+        for i in 0..map_keys.len() {
+            map_keys_hashmap.insert(map_keys.get(i).unwrap().clone(), i);
+        }
 
         let mut new_json_datas: Vec<serde_json::Value> = Vec::new();
 
