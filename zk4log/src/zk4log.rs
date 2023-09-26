@@ -9,14 +9,12 @@ use serde_json::{to_value, Map};
 use sha2::{Digest, Sha256};
 use sha256::digest;
 use std::{fs, process::Command};
-use crossterm::{cursor, execute, ExecutableCommand, terminal::{Clear, ClearType}};
-use std::{io::{self, Write}, thread, time::Duration};
+
 
 pub struct Zk4log;
 
 impl Zk4log {
     pub fn hide(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
-        let mut stdout = io::stdout();
         // 引数の文字列を取得する
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
