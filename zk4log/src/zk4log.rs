@@ -17,24 +17,10 @@ impl Zk4log {
         let path: String = call.req(0)?;
         let output = call.get_flag("output")?;
 
-        // output for debug
-        eprintln!("output: {:?}", output);
-        eprintln!("path: {}", path);
 
         // pathのファイルが存在するかどうかを確認する
-        let path = expand_tilde(path);
-        if !path.exists() {
-            eprintln!("test");
-            eprintln!("File not found: {}", path.display());
-
-            return Err(LabeledError {
-                label: "File not found".into(),
-                msg: "file not found".into(),
-                span: Some(call.head),
-            });
-        }
-
-        eprintln!("Open file: {}", path.display());
+        Self::check_file_exists(&path, call)?;
+        eprintln!("Open file: {}", path);
 
         let data = fs::read_to_string(path).expect("Unable to read file");
         let json_value: serde_json::Value =
@@ -110,7 +96,7 @@ impl Zk4log {
                     let key = map_keys.get(index).unwrap();
 
                     if selections.contains(&index) {
-                        // ハッシュ化のために、入力ログデータを 
+                        // ハッシュ化のために、入力ログデータを
                         // (Stringではなく) 固定長のu8 配列で表現する
                         let preimage_str = value.clone().to_string() + &salt;
                         let mut preimage_bytes: [u8; 80] = [0; 80];
@@ -164,18 +150,9 @@ impl Zk4log {
         let path: String = call.req(0)?;
 
         // pathのファイルが存在するかどうかを確認する
-        let path = expand_tilde(path);
-        let path = path.as_path();
-        if !path.exists() {
-            eprintln!("File not found: {}", path.display());
-            return Err(LabeledError {
-                label: "File not found".into(),
-                msg: "File not found".into(),
-                span: Some(call.head),
-            });
-        }
+        Self::check_file_exists(&path, call)?;
 
-        let data = fs::read_to_string(path).expect("Unable to read file");
+        let data = fs::read_to_string(&path).expect("Unable to read file");
         let json_value: serde_json::Value =
             serde_json::from_str(&data).expect("Invalid JSON format");
         let mut json_datas: Vec<serde_json::Value> = Vec::new();
@@ -229,7 +206,7 @@ impl Zk4log {
         }
 
         let open_json_columns = open_json_columns.join(" ");
-        let command_str = format!("open {} | select -i {}", path.display(), open_json_columns);
+        let command_str = format!("open {} | select -i {}", &path, open_json_columns);
         eprintln!("{}", command_str);
         let output = Command::new("nu")
             .arg("-c")
@@ -254,6 +231,21 @@ impl Zk4log {
                 CHARSET[idx] as char
             })
             .collect()
+    }
+
+    fn check_file_exists(file: &str, call: &EvaluatedCall) -> Result<(), LabeledError> {
+        let path = expand_tilde(&file);
+        if !path.exists() {
+            eprintln!("File not found: {}", path.display());
+
+            return Err(LabeledError {
+                label: "File not found".into(),
+                msg: "file not found".into(),
+                span: Some(call.head),
+            });
+        }
+
+        Ok(())
     }
 
     pub fn zk4log(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
