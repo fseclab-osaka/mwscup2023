@@ -104,16 +104,15 @@ pub fn prove(params: Parameters<Bls12>, m: String) -> Proof<Bls12> {
     proof
 }
 
-pub fn verify(pvk: &PreparedVerifyingKey<Bls12>, hash: &[u8], proof: &Proof<Bls12>) {
+pub fn verify(pvk: &PreparedVerifyingKey<Bls12>, hash: &[u8], proof: &Proof<Bls12>) -> bool {
     // Pack the hash as inputs for proof verification.
     let hash_bits = multipack::bytes_to_bits_le(&hash);
     let inputs = multipack::compute_multipacking(&hash_bits);
 
     if groth16::verify_proof(pvk, &proof, &inputs).is_ok() {
-        eprintln!("Verify OK.");
+        return true;
     } else {
-        eprintln!("Verify isn't OK");
-        std::process::exit(1);
+        return false;
     }
 }
 
