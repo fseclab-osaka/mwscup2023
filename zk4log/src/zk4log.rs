@@ -29,7 +29,7 @@ impl Zk4log {
         let output = call.get_flag("output")?;
 
         // pathのファイルが存在するかどうかを確認する
-        Self::check_file_exists(&path, call)?;
+        let path = Self::expand_tilde_and_check_file_exists(&path, call)?;
         eprintln!("Open file: {}", path);
 
         let data = fs::read_to_string(path).expect("Unable to read file");
@@ -200,7 +200,7 @@ impl Zk4log {
         let path: String = call.req(0)?;
 
         // pathのファイルが存在するかどうかを確認する
-        Self::check_file_exists(&path, call)?;
+        let path = Self::expand_tilde_and_check_file_exists(&path, call)?;
 
         let data = fs::read_to_string(&path).expect("Unable to read file");
         let json_value: serde_json::Value =
@@ -271,12 +271,12 @@ impl Zk4log {
     pub fn verify(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
         // log, proof, key があるかを確認
         let log: String = call.get_flag_value("json").unwrap().as_string().unwrap();
-        Self::check_file_exists(&log, call)?;
+        let log = Self::expand_tilde_and_check_file_exists(&log, call)?;
         let proof: String = call.get_flag_value("proof").unwrap().as_string().unwrap();
-        Self::check_file_exists(&proof, call)?;
+        let proof = Self::expand_tilde_and_check_file_exists(&proof, call)?;
         let key: String = call.get_flag_value("key").unwrap().as_string().unwrap();
-        Self::check_file_exists(&key, call)?;
-
+        let key = Self::expand_tilde_and_check_file_exists(&key, call)?;
+        
         // log をロード
         let log = fs::read_to_string(&log).unwrap();
         let log_json: serde_json::Value = from_str(&log).unwrap();
@@ -358,7 +358,7 @@ impl Zk4log {
             .collect()
     }
 
-    fn check_file_exists(file: &str, call: &EvaluatedCall) -> Result<(), LabeledError> {
+    fn expand_tilde_and_check_file_exists(file: &str, call: &EvaluatedCall) -> Result<String, LabeledError> {
         let path = expand_tilde(&file);
         if !path.exists() {
             eprintln!("File not found: {}", path.display());
@@ -370,7 +370,7 @@ impl Zk4log {
             });
         }
 
-        Ok(())
+        Ok(path.into_os_string().into_string().unwrap())
     }
 
     pub fn zk4log(&self, call: &EvaluatedCall, _input: &Value) -> Result<Value, LabeledError> {
