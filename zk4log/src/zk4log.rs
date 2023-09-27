@@ -80,6 +80,9 @@ impl Zk4log {
 
         let salt: String = Self::gen_salt();
 
+        // 鍵生成中というメッセージを表示
+        print!("{}", "Generating keys... ");
+        io::stdout().flush().unwrap();
         // パラメタと検証鍵を生成
         let (params, _pvk) = zk::setup();
         fs::write("out.proof", "").unwrap(); // clear
