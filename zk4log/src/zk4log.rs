@@ -1,8 +1,8 @@
-use crate::zk::{self, prove, verify};
 use crate::progressBar::ProgressBar;
-use crossterm::style::Stylize;
+use crate::zk::{self, prove, verify};
 use bellman::groth16::{self, PreparedVerifyingKey, Proof, VerifyingKey};
 use bls12_381::Bls12;
+use crossterm::style::Stylize;
 use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use hex;
 use nu_path::expand_tilde;
@@ -17,7 +17,6 @@ use std::{
     io::{self, Read, Write},
     process::Command,
 };
-
 
 pub struct Zk4log;
 
@@ -88,7 +87,8 @@ impl Zk4log {
         }
 
         // map_keysのインデックスを素早く取得するためのハッシュマップを作成
-        let mut map_keys_hashmap: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        let mut map_keys_hashmap: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
         for i in 0..map_keys.len() {
             map_keys_hashmap.insert(map_keys.get(i).unwrap().clone(), i);
         }
@@ -128,9 +128,8 @@ impl Zk4log {
                     let index = map_keys_hashmap.get(key).unwrap();
 
                     if selections.contains(&index) {
-
                         progress_bar.progress();
-                        // ハッシュ化のために、入力ログデータを 
+                        // ハッシュ化のために、入力ログデータを
                         // (Stringではなく) 固定長のu8 配列で表現する
                         let preimage_str = value.clone().to_string() + &salt;
                         let mut preimage_bytes: [u8; 80] = [0; 80];
@@ -191,7 +190,10 @@ impl Zk4log {
             }
         };
         fs::write(output_name, output_data).expect("Unable to write to file");
-        eprintln!("\n{}", "finished making concealed log file and proof!".green());
+        eprintln!(
+            "\n{}",
+            "finished making concealed log file and proof!".green()
+        );
 
         Ok(Value::nothing(call.head))
     }
@@ -276,7 +278,7 @@ impl Zk4log {
         let proof = Self::expand_tilde_and_check_file_exists(&proof, call)?;
         let key: String = call.get_flag_value("key").unwrap().as_string().unwrap();
         let key = Self::expand_tilde_and_check_file_exists(&key, call)?;
-        
+
         // log をロード
         let log = fs::read_to_string(&log).unwrap();
         let log_json: serde_json::Value = from_str(&log).unwrap();
@@ -320,7 +322,6 @@ impl Zk4log {
 
         let mut verify_ok = true;
         for i in 0..buf.len() / 3 {
-            eprintln!("ver: test");
             let idx: usize = std::str::from_utf8(buf[3 * i]).unwrap().parse().unwrap();
             let k = std::str::from_utf8(buf[3 * i + 1])
                 .unwrap()
@@ -358,7 +359,10 @@ impl Zk4log {
             .collect()
     }
 
-    fn expand_tilde_and_check_file_exists(file: &str, call: &EvaluatedCall) -> Result<String, LabeledError> {
+    fn expand_tilde_and_check_file_exists(
+        file: &str,
+        call: &EvaluatedCall,
+    ) -> Result<String, LabeledError> {
         let path = expand_tilde(&file);
         if !path.exists() {
             eprintln!("File not found: {}", path.display());
