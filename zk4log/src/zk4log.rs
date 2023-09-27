@@ -117,7 +117,7 @@ impl Zk4log {
 
         let mut progress_bar = ProgressBar::new(item_count as u64);
         // ログを秘匿化しつつ ZKP を生成する
-        for json_data in json_datas {
+        for (idx, json_data) in json_datas.iter().enumerate() {
             if let serde_json::Value::Object(ref map) = json_data {
                 let mut new_json_data: Map<String, serde_json::Value> = Map::new();
                 for i in 0..map.len() {
@@ -156,7 +156,7 @@ impl Zk4log {
 
                         // The proof output style is:
                         //   (<json_record_index>::<json_key>::<proof>)+
-                        let data = format!("{}::{}::", i, key);
+                        let data = format!("{}::{}::", idx, key);
                         file.write_all(data.as_bytes()).unwrap();
                         proof.write(&mut file).unwrap();
                         file.write_all("::".as_bytes()).unwrap();
