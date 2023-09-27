@@ -81,7 +81,8 @@ impl Zk4log {
         let salt: String = Self::gen_salt();
 
         // パラメタと検証鍵を生成
-        let (params, pvk) = zk::setup();
+        let (params, _pvk) = zk::setup();
+        fs::write("out.proof", "").unwrap(); // clear
 
         // ログを秘匿化しつつ ZKP を生成する
         for json_data in json_datas {
@@ -127,7 +128,8 @@ impl Zk4log {
                             .open("out.proof")
                             .unwrap();
 
-                        fs::write("out.proof", "").unwrap(); // clear
+                        // The proof output style is:
+                        //   (<json_record_index>::<json_key>::<proof>)+
                         let data = format!("{}::{}::", i, key);
                         file.write_all(data.as_bytes()).unwrap();
                         proof.write(&mut file).unwrap();
@@ -245,7 +247,7 @@ impl Zk4log {
         Self::check_file_exists(&proof, call)?;
         let key: String = call.get_flag_value("key").unwrap().as_string().unwrap();
         Self::check_file_exists(&key, call)?;
-        
+
         // log をロード
         let log = fs::read_to_string(&log).unwrap();
         let log_json: serde_json::Value = from_str(&log).unwrap();
@@ -287,15 +289,29 @@ impl Zk4log {
         let chunk = &proof_buf[start..];
         buf.push(chunk);
 
-        let i: usize = std::str::from_utf8(buf[0]).unwrap().parse().unwrap();
-        let k = std::str::from_utf8(buf[1]).unwrap().trim_matches('"');
-        let proof: Proof<Bls12> = Proof::read(io::Cursor::new(buf[2])).unwrap();
-        let hash = log_json[i][k].as_str().unwrap().trim_matches('"');
-        let hash = &hex::decode(hash).unwrap();
+        let mut verify_ok = true;
+        for i in 0..buf.len() / 3 {
+            eprintln!("ver: test");
+            let idx: usize = std::str::from_utf8(buf[3 * i]).unwrap().parse().unwrap();
+            let k = std::str::from_utf8(buf[3 * i + 1])
+                .unwrap()
+                .trim_matches('"');
+            let proof: Proof<Bls12> = Proof::read(io::Cursor::new(buf[3 * i + 2])).unwrap();
+            let hash = log_json[idx][k].as_str().unwrap().trim_matches('"');
+            let hash = &hex::decode(hash).unwrap();
+            verify_ok &= zk::verify(&pvk, &hash, &proof);
+        }
 
-        zk::verify(&pvk, &hash, &proof);
-
-        return Ok(Value::nothing(call.head));
+        if verify_ok {
+            eprintln!("Verify OK!");
+            return Ok(Value::nothing(call.head));
+        } else {
+            return Err(LabeledError {
+                label: "Verify fialed".into(),
+                msg: "verify failed".into(),
+                span: Some(call.head),
+            });
+        }
     }
 
     // gen_salt: 16 文字の乱数を生成する
