@@ -9,7 +9,6 @@ use bellman::{
 };
 use bls12_381::Bls12;
 use ff::PrimeField;
-use pairing::Engine;
 use rand::rngs::OsRng;
 
 /// Our own SHA-256d gadget. Input and output are in little-endian bit order.

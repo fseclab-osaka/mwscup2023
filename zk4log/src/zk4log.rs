@@ -1,5 +1,5 @@
-use crate::progressBar::ProgressBar;
-use crate::zk::{self, prove, verify};
+use crate::progress_bar::ProgressBar;
+use crate::zk::{self, prove};
 use bellman::groth16::{self, PreparedVerifyingKey, Proof, VerifyingKey};
 use bls12_381::Bls12;
 use crossterm::style::Stylize;
@@ -11,7 +11,6 @@ use nu_protocol::Value;
 use rand::Rng;
 use serde_json::{from_str, to_value, Map};
 use sha2::{Digest, Sha256};
-use sha256::digest;
 use std::{
     fs,
     io::{self, Read, Write},

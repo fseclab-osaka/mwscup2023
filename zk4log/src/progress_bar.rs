@@ -1,5 +1,3 @@
-use std::io::{self, Write};
-
 pub struct ProgressBar {
     pub total_steps: u64,
     current_step: u64,
@@ -29,9 +27,5 @@ impl ProgressBar {
         }
 
         eprint!("] {:.1}%", percentage);
-    }
-
-    pub fn finish(&self) {
-        eprintln!("\nDone!");
     }
 }
