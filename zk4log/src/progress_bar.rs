@@ -15,7 +15,7 @@ impl ProgressBar {
         self.current_step += 1;
         let percentage = self.current_step as f64 / self.total_steps as f64 * 100.0;
 
-        eprint!("\rProgress: [");
+        eprint!("\rhiding...: [");
 
         let completed_steps = (percentage as u64 / 10) as usize;
         for _ in 0..completed_steps {
